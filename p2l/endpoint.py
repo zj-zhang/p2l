@@ -44,7 +44,7 @@ def parse_args():
         "-ht",
         type=str,
         default="rk",
-        help="Type of the head",
+        help="Type of model head",
     )
     parser.add_argument(
         "--loss-type",
@@ -75,8 +75,24 @@ def parse_args():
         help="Port to run the server on",
     )
 
-    parser.add_argument("--reload", action=argparse.BooleanOptionalAction, default=True)
-    parser.add_argument("--workers", type=int, default=1)
+    parser.add_argument(
+        "--reload",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Whether to reload the endpoint on detected code change, needs workers to be 1.",
+    )
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=1,
+        help="Number of endpoint workers (will hold a model per worker).",
+    )
+    parser.add_argument(
+        "--cuda",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Flag to enable using a GPU to host the model. Flag is true by default.",
+    )
 
     args = parser.parse_args()
 
@@ -99,7 +115,7 @@ async def lifespan(app: FastAPI):
         task="text-classification",
         model=model,
         tokenizer=tokenizer,
-        device="cuda",
+        device="cuda" if args.cuda else "cpu",
         pipeline_class=P2LPipeline,
     )
 
@@ -255,7 +271,7 @@ if __name__ == "__main__":
     args = parse_args()
 
     uvicorn.run(
-        "route.p2l_endpoint:app",
+        "p2l.endpoint:app",
         port=args.port,
         host=args.host,
         reload=args.reload,

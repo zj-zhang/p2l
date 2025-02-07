@@ -14,7 +14,6 @@ import torch.nn.functional as F
 from typing import Dict, Tuple, Callable, Optional
 
 
-
 registered_transformers: Dict[str, Tuple[PreTrainedModel, PreTrainedModel]] = {
     "qwen2": (Qwen2PreTrainedModel, Qwen2Model),
     "llama": (LlamaPreTrainedModel, LlamaModel),
@@ -56,6 +55,7 @@ def register_aggr_model(name: str):
     def decorator(func: Callable):
         registered_aggr_models[name] = func
         return func
+
     return decorator
 
 
@@ -63,6 +63,7 @@ def register_pairwise_loss(name: str):
     def decorator(func: Callable):
         registered_pairwise_losses[name] = func
         return func
+
     return decorator
 
 
@@ -70,7 +71,9 @@ def register_init(name: str):
     def decorator(func: Callable):
         registered_inits[name] = func
         return func
+
     return decorator
+
 
 @dataclass
 class HeadOutputs(ModelOutput):
@@ -194,11 +197,12 @@ def RK_Loss(
 
     return loss
 
+
 @register_loss("rk-reparam")
 def RK_Reparam_Loss(
     head_output: HeadOutputs, labels: Dict, weights: torch.Tensor = None, **kwargs
 ):
-    
+
     coefs = head_output.coefs
     eta = head_output.eta
 
@@ -212,8 +216,7 @@ def RK_Reparam_Loss(
 
     pi_win = torch.exp(beta_win)
     pi_lose = torch.exp(beta_lose)
-    
-    
+
     p_win = pi_win / (pi_win + theta * pi_lose + 1.0)
 
     p_lose = pi_lose / (pi_lose + theta * pi_win + 1.0)
@@ -224,7 +227,7 @@ def RK_Reparam_Loss(
 
     P = torch.hstack((p_win, p_tie))
     tie_ind = labels[:, -1].unsqueeze(-1)
-    
+
     p = P.gather(dim=-1, index=tie_ind).contiguous()
 
     p = torch.clamp(p, min=1e-6)
@@ -235,7 +238,7 @@ def RK_Reparam_Loss(
         loss = loss * weights
 
     loss = loss.mean()
-    
+
     return loss
 
 
@@ -284,6 +287,8 @@ def BA_loss(
 
     loss = loss.mean()
 
+    print("loss: ", loss.item())
+
     return loss
 
 
@@ -316,6 +321,7 @@ def BAG_loss(
 
     p_tie = 1.0 - p_win - p_lose - p_tie_bb
 
+    assert p_win.shape == p_lose.shape == p_tie_bb.shape == p_tie.shape
     P = torch.hstack((p_win, p_tie, p_tie_bb))
 
     tie_ind = labels[:, -1].unsqueeze(-1)
@@ -330,6 +336,8 @@ def BAG_loss(
         loss = loss * weights
 
     loss = loss.mean()
+
+    # print("loss: ", loss.item())
 
     return loss
 
@@ -579,21 +587,26 @@ def get_tokenizer(
 @register_aggr_model("bt")
 @register_aggr_model("bt-tie")
 class BTAggrModel(nn.Module):
-    def __init__(self, num_models, batch_size = 1):
+    def __init__(self, num_models, batch_size=1):
         super().__init__()
-        self.coefs = nn.Parameter(nn.init.constant_(torch.empty(batch_size, num_models), 0.5))
+        self.coefs = nn.Parameter(
+            nn.init.constant_(torch.empty(batch_size, num_models), 0.5)
+        )
         self.eta = None
 
     def forward(self):
         return self.coefs, self.eta
 
+
 @register_aggr_model("rk")
 @register_aggr_model("rk-reparam")
 @register_aggr_model("bag")
 class RKAggrModel(nn.Module):
-    def __init__(self, num_models, batch_size = 1):
+    def __init__(self, num_models, batch_size=1):
         super().__init__()
-        self.coefs = nn.Parameter(nn.init.constant_(torch.empty(batch_size, num_models), 0.5))
+        self.coefs = nn.Parameter(
+            nn.init.constant_(torch.empty(batch_size, num_models), 0.5)
+        )
         self.eta = nn.Parameter(nn.init.constant_(torch.empty(batch_size, 1), 0.1))
 
     def forward(self):
@@ -602,7 +615,9 @@ class RKAggrModel(nn.Module):
 
 @register_pairwise_loss("bt")
 @register_pairwise_loss("bt-tie")
-def pairwise_BT_loss(real_output: HeadOutputs, aggregated_output: HeadOutputs, true_probs: torch.tensor):
+def pairwise_batch_BT_loss(
+    real_output: HeadOutputs, aggregated_output: HeadOutputs, true_probs: torch.tensor
+):
     real_betas = real_output.coefs
     aggregated_betas = aggregated_output.coefs
 
@@ -631,16 +646,21 @@ def pairwise_BT_loss(real_output: HeadOutputs, aggregated_output: HeadOutputs, t
 
     return loss
 
+
 # batched loss
 @register_pairwise_loss("rk")
-def pairwise_batch_RK_loss(real_output: HeadOutputs, aggregated_output: HeadOutputs, true_probs: torch.tensor):
+def pairwise_batch_RK_loss(
+    real_output: HeadOutputs, aggregated_output: HeadOutputs, true_probs: torch.tensor
+):
     real_betas = real_output.coefs
     num_prompts, num_models = real_betas.shape[-2], real_betas.shape[-1]
-    
-    
+
     aggregated_betas = aggregated_output.coefs
     BETA = 0.1
-    aggregated_eta = torch.clamp(torch.nn.functional.softplus(aggregated_output.eta - 22.5, BETA).squeeze(-1), min=0.02)
+    aggregated_eta = torch.clamp(
+        torch.nn.functional.softplus(aggregated_output.eta - 22.5, BETA).squeeze(-1),
+        min=0.02,
+    )
 
     pair_indices = torch.tensor(
         [(i, j) for i in range(num_models) for j in range(i + 1, num_models)],
@@ -654,88 +674,214 @@ def pairwise_batch_RK_loss(real_output: HeadOutputs, aggregated_output: HeadOutp
     pred_probs_win = torch.sigmoid(beta_i_agg - beta_j_agg - aggregated_eta)
     pred_probs_loss = torch.sigmoid(beta_j_agg - beta_i_agg - aggregated_eta)
     pred_probs_tie = 1 - pred_probs_win - pred_probs_loss
- 
+
     pred_probs = torch.stack((pred_probs_win, pred_probs_loss, pred_probs_tie), dim=-1)
-    
-    pred_probs_expanded = pred_probs.unsqueeze(1).expand(-1, num_prompts, -1, -1) 
+
+    pred_probs_expanded = pred_probs.unsqueeze(1).expand(-1, num_prompts, -1, -1)
 
     eps = 1e-9
-    neg_log_prob = -torch.sum(true_probs * torch.log(pred_probs_expanded + eps), dim=-1)  
+    neg_log_prob = -torch.sum(true_probs * torch.log(pred_probs_expanded + eps), dim=-1)
 
     batch_losses = neg_log_prob.mean(dim=(1, 2))
     loss = batch_losses.mean()
 
     return loss
 
+
 # batched
 @register_pairwise_loss("rk-reparam")
-def pairwise_batch_RK_reparam_loss(real_output: HeadOutputs, aggregated_output: HeadOutputs, true_probs: torch.tensor, **kwargs):
+def pairwise_batch_RK_reparam_loss(
+    real_output: HeadOutputs,
+    aggregated_output: HeadOutputs,
+    true_probs: torch.tensor,
+    **kwargs,
+):
     real_betas = real_output.coefs
     num_prompts, num_models = real_betas.shape[-2], real_betas.shape[-1]
-    
+
     aggregated_betas = aggregated_output.coefs
     aggregrated_theta = torch.exp(aggregated_output.eta) + 1.000001
-    
+
     pair_indices = torch.tensor(
         [(i, j) for i in range(num_models) for j in range(i + 1, num_models)],
         dtype=torch.long,
     )
-    
+
     beta_i_agg = aggregated_betas[:, pair_indices[:, 0]]
     beta_j_agg = aggregated_betas[:, pair_indices[:, 1]]
-    
+
     pi_win = torch.exp(beta_i_agg)
     pi_lose = torch.exp(beta_j_agg)
-    
+
     p_win = pi_win / (pi_win + aggregrated_theta * pi_lose + 1.0)
     p_lose = pi_lose / (pi_lose + aggregrated_theta * pi_win + 1.0)
     p_tie = 1.0 - p_win - p_lose
 
     pred_probs = torch.stack((p_win, p_lose, p_tie), dim=-1)
-    pred_probs_expanded = pred_probs.unsqueeze(1).expand(-1, num_prompts, -1, -1) 
+    pred_probs_expanded = pred_probs.unsqueeze(1).expand(-1, num_prompts, -1, -1)
 
     eps = 1e-9
-    neg_log_prob = -torch.sum(true_probs * torch.log(pred_probs_expanded + eps), dim=-1) 
-    batch_losses = neg_log_prob.mean(dim=(1, 2)) 
+    neg_log_prob = -torch.sum(true_probs * torch.log(pred_probs_expanded + eps), dim=-1)
+    batch_losses = neg_log_prob.mean(dim=(1, 2))
     loss = batch_losses.mean()
-    
+
     return loss
 
-# batched
-@register_pairwise_loss("bag")
-def pairwise_batch_bag_loss(real_output: HeadOutputs, aggregated_output: HeadOutputs, true_probs: torch.tensor, **kwargs):
-    real_betas = real_output.coefs
-    num_prompts, num_models = real_betas.shape[-2], real_betas.shape[-1]
-    
-    aggregated_betas = aggregated_output.coefs
-    aggregrated_theta = torch.exp(aggregated_output.eta) + 1.000001
-    
-    pair_indices = torch.tensor(
-        [(i, j) for i in range(num_models) for j in range(i + 1, num_models)],
-        dtype=torch.long,
-    )
-    
-    beta_i_agg = aggregated_betas[:, pair_indices[:, 0]]
-    beta_j_agg = aggregated_betas[:, pair_indices[:, 1]]
-    
-    pi_win = torch.exp(beta_i_agg)
-    pi_lose = torch.exp(beta_j_agg)
+
+def get_bag_probs(beta_win, beta_lose, gamma, theta):
+    pi_win = torch.exp(beta_win)
+    pi_lose = torch.exp(beta_lose)
     pi_gamma = 1.0
 
-    p_win = pi_win / (pi_win + aggregrated_theta  * pi_lose + pi_gamma)
+    p_win = pi_win / (pi_win + theta * pi_lose + pi_gamma)
 
-    p_lose = pi_lose / (pi_lose + aggregrated_theta  * pi_win + pi_gamma)
+    p_lose = pi_lose / (pi_lose + theta * pi_win + pi_gamma)
 
     p_tie_bb = pi_gamma / (pi_gamma + pi_win + pi_lose)
 
     p_tie = 1.0 - p_win - p_lose - p_tie_bb
 
-    pred_probs = torch.stack((p_win, p_lose, p_tie, p_tie_bb), dim=-1)
-    pred_probs_expanded = pred_probs.unsqueeze(1).expand(-1, num_prompts, -1, -1) 
+    return torch.stack((p_win, p_lose, p_tie, p_tie_bb), dim=-1)
+
+
+# batched
+@register_pairwise_loss("bag")
+def pairwise_batch_bag_loss(
+    real_output: HeadOutputs,
+    aggregated_output: HeadOutputs,
+    true_probs: torch.tensor,
+    **kwargs,
+):
+    real_betas = real_output.coefs
+    num_prompts, num_models = real_betas.shape[-2], real_betas.shape[-1]
+
+    aggregated_betas = aggregated_output.coefs
+    aggregrated_theta = torch.exp(aggregated_output.eta) + 1.000001
+
+    pair_indices = torch.tensor(
+        [(i, j) for i in range(num_models) for j in range(i + 1, num_models)],
+        dtype=torch.long,
+    )
+
+    beta_i_agg = aggregated_betas[:, pair_indices[:, 0]]
+    beta_j_agg = aggregated_betas[:, pair_indices[:, 1]]
+
+    pred_probs = get_bag_probs(beta_i_agg, beta_j_agg, 1.0, aggregrated_theta)
+
+    pred_probs_expanded = pred_probs.unsqueeze(1).expand(-1, num_prompts, -1, -1)
 
     eps = 1e-9
-    neg_log_prob = -torch.sum(true_probs * torch.log(pred_probs_expanded + eps), dim=-1) 
-    batch_losses = neg_log_prob.mean(dim=(1, 2)) 
+    neg_log_prob = -torch.sum(true_probs * torch.log(pred_probs_expanded + eps), dim=-1)
+    batch_losses = neg_log_prob.mean(dim=(1, 2))
     loss = batch_losses.mean()
-    
+
+    return loss
+
+
+@register_loss("tie-rk")
+def RK_Tie_Loss(
+    head_output: HeadOutputs, labels: Dict, weights: torch.Tensor = None, **kwargs
+):
+    coefs = head_output.coefs
+    eta = torch.clamp(
+        torch.nn.functional.softplus(head_output.eta - 22.5, BETA).squeeze(-1), min=0.02
+    )
+    model_idx = labels[:, :2]
+    paired_coefs = coefs.gather(dim=-1, index=model_idx).contiguous()
+
+    paired_delta_logit = paired_coefs[:, 0] - paired_coefs[:, 1]
+
+    p_w = torch.sigmoid(paired_delta_logit - eta)
+    p_l = torch.sigmoid(-1 * paired_delta_logit - eta)
+    p_t = 1 - p_w - p_l
+
+    p_not_t = p_w + p_l
+    p_t = p_t
+
+    A = torch.stack((p_not_t, p_t))
+
+    tie_ind = labels[:, -1].unsqueeze(0)
+    p = A.take_along_dim(dim=0, indices=tie_ind)
+
+    p = torch.clamp(p, min=1e-3)
+
+    loss = -torch.log(p)
+    if weights:
+        loss = loss * weights
+    loss = loss.mean()
+
+    return loss
+
+
+@register_loss("tie-bag")
+def bag_tie_loss(
+    head_output: HeadOutputs, labels: Dict, weights: torch.Tensor = None, **kwargs
+):
+    coefs = head_output.coefs
+    eta = head_output.eta
+
+    theta = torch.exp(eta) + 1.000001
+
+    winner_idx = labels[:, 0:1]
+    loser_idx = labels[:, 1:2]
+
+    beta_win = coefs.gather(dim=-1, index=winner_idx).contiguous()
+    beta_lose = coefs.gather(dim=-1, index=loser_idx).contiguous()
+
+    p_win, p_lose, p_tie, p_tie_bb = torch.unbind(
+        get_bag_probs(beta_win, beta_lose, 1.0, theta), dim=-1
+    )
+
+    P = torch.hstack((p_win + p_lose, p_tie + p_tie_bb))
+
+    tie_ind = labels[:, -1].unsqueeze(-1)
+    tie_ind = torch.where(tie_ind == 0, 0, 1)  # segment into ties and not ties
+
+    p = P.gather(dim=-1, index=tie_ind).contiguous()
+
+    p = torch.clamp(p, min=1e-6)
+
+    loss = -torch.log(p)
+
+    if weights:
+        loss = loss * weights
+
+    loss = loss.mean()
+    return loss
+
+
+@register_loss("tie-bb-bag")
+def bag_tie_bb_loss(
+    head_output: HeadOutputs, labels: Dict, weights: torch.Tensor = None, **kwargs
+):
+    coefs = head_output.coefs
+    eta = head_output.eta
+
+    theta = torch.exp(eta) + 1.000001
+
+    winner_idx = labels[:, 0:1]
+    loser_idx = labels[:, 1:2]
+
+    beta_win = coefs.gather(dim=-1, index=winner_idx).contiguous()
+    beta_lose = coefs.gather(dim=-1, index=loser_idx).contiguous()
+
+    p_win, p_lose, p_tie, p_tie_bb = torch.unbind(
+        get_bag_probs(beta_win, beta_lose, 1.0, theta), dim=-1
+    )
+
+    P = torch.hstack((p_win + p_lose + p_tie, p_tie_bb))
+
+    tie_ind = labels[:, -1].unsqueeze(-1)
+    tie_ind = torch.where(tie_ind == 2, 1, 0)  # index should be 1 if tie-bb
+
+    p = P.gather(dim=-1, index=tie_ind).contiguous()
+
+    p = torch.clamp(p, min=1e-6)
+
+    loss = -torch.log(p)
+
+    if weights:
+        loss = loss * weights
+
+    loss = loss.mean()
     return loss
