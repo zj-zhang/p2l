@@ -1,6 +1,6 @@
 # P2L
 
-This is the codebase for the paper [Prompt-to-Leaderboard: Prompt-Adaptive LLM Evaluations](https://arxiv.org/pdf/2502.14855).
+This is the codebase for the paper [Prompt-to-Leaderboard](https://arxiv.org/pdf/2502.14855).
 
 ## Abstract
 Language model evaluations typically rely on aggregated metrics like accuracy or human preference, averaging across users and prompts. This averaging obscures user- and prompt-specific variations in model performance.
