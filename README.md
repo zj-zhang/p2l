@@ -370,3 +370,17 @@ Our in-depth evaluation code can be run using `p2l.auto_evals`.
     3. `--aggr_scale_gt`: Specify whether to use `marginal-gt` or `arena` as ground truth for categories.
 
 ---
+
+## Citation
+
+```
+@misc{frick2025prompttoleaderboard,
+      title={Prompt-to-Leaderboard}, 
+      author={Evan Frick and Connor Chen and Joseph Tennyson and Tianle Li and Wei-Lin Chiang and Anastasios N. Angelopoulos and Ion Stoica},
+      year={2025},
+      eprint={2502.14855},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG},
+      url={https://arxiv.org/abs/2502.14855}, 
+}
+```
