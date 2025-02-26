@@ -4,6 +4,8 @@ This is the codebase for the paper [Prompt-to-Leaderboard](https://arxiv.org/pdf
 
 Models weights found at our [LMArena HF Collection](https://huggingface.co/collections/lmarena-ai/prompt-to-leaderboard-67bcf7ddf6022ef3cfd260cc).
 
+Try on Chatbot Arena at the [Prompt-to-Leaderboard](https://lmarena.ai/?p2l) tab!
+
 ## Abstract
 Large language model (LLM) evaluations typically rely on aggregated metrics like accuracy or human preference, averaging across users and prompts. This averaging obscures user- and prompt-specific variations in model performance.
 To address this, we propose Prompt-to-Leaderboard (P2L), a method that produces leaderboards specific to a prompt or set of prompts.
