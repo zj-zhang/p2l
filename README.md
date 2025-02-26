@@ -2,6 +2,8 @@
 
 This is the codebase for the paper [Prompt-to-Leaderboard](https://arxiv.org/pdf/2502.14855).
 
+Models weights found at our [LMArena HF Collection](https://huggingface.co/collections/lmarena-ai/prompt-to-leaderboard-67bcf7ddf6022ef3cfd260cc).
+
 ## Abstract
 Large language model (LLM) evaluations typically rely on aggregated metrics like accuracy or human preference, averaging across users and prompts. This averaging obscures user- and prompt-specific variations in model performance.
 To address this, we propose Prompt-to-Leaderboard (P2L), a method that produces leaderboards specific to a prompt or set of prompts.
@@ -311,7 +313,7 @@ This codebase also contains the training code for P2L models. To train a P2L mod
 To train run, for example:
 
 ```bash
-deepspeed --num_gpus=8 train.py --config training_configs/<your_config>.yaml --no-eval --save-steps 512
+deepspeed --num_gpus=8 --module p2l.train --config training_configs/<your_config>.yaml --no-eval --save-steps 512
 ```
 
 ## Inferencing a P2L Model
