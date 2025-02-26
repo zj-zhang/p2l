@@ -3,12 +3,12 @@
 This is the codebase for the paper [Prompt-to-Leaderboard](https://arxiv.org/pdf/2502.14855).
 
 ## Abstract
-Language model evaluations typically rely on aggregated metrics like accuracy or human preference, averaging across users and prompts. This averaging obscures user- and prompt-specific variations in model performance.
-To address this, we propose Prompt-to-Leaderboard (P2L), a method that predicts prompt-specific leaderboards by training large language models on human preference data.
-The core idea is to train LLMs to output the coefficients of parametric regressions that represent per-prompt leaderboards.
-The resulting prompt-dependent leaderboards facilitate optimal routing of queries to models, personalized leaderboards, unsupervised task-specific performance analysis, and automated evaluation of model strengths and weaknesses. 
-Live results from Chatbot Arena suggest that P2L better captures the nuanced landscape of language model performance than the averaged leaderboard.
-Furthermore, our findings suggest that P2L's ability to produce prompt-specific evaluations follows a power law scaling similar to that observed in LLMs themselves. In January 2025, the router we trained based on this methodology achieved the \#1 spot in the Chatbot Arena leaderboard.
+Large language model (LLM) evaluations typically rely on aggregated metrics like accuracy or human preference, averaging across users and prompts. This averaging obscures user- and prompt-specific variations in model performance.
+To address this, we propose Prompt-to-Leaderboard (P2L), a method that produces leaderboards specific to a prompt or set of prompts.
+The core idea is to train an LLM taking natural language prompts as input to output a vector of Bradley-Terry coefficients which are then used to predict the human preference vote.
+The resulting prompt-dependent leaderboards allow for unsupervised task-specific evaluation, optimal routing of queries to models, personalization, and automated evaluation of model strengths and weaknesses. 
+Data from Chatbot Arena suggest that P2L better captures the nuanced landscape of language model performance than the averaged leaderboard. 
+Furthermore, our findings suggest that P2L's ability to produce prompt-specific evaluations follows a power law scaling similar to that observed in LLMs themselves. In January 2025, the router we trained based on this methodology achieved the #1 spot in the Chatbot Arena leaderboard.
 
 ## Table of Contents
 
