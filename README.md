@@ -51,13 +51,13 @@ source $HOME/.local/bin/env
 To create a Python virtual environment run:
 
 ```bash
-uv venv env --python 3.10
+uv venv .env --python 3.10
 ```
 
 To activate said environment, run:
 
 ```bash
-source env/bin/activate
+source .env/bin/activate
 ```
 
 ### Serving P2L Setup
