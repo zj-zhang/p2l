@@ -1,4 +1,4 @@
-# P2L
+# Prompt-to-Leaderboard (P2L)
 
 This is the codebase for the paper [Prompt-to-Leaderboard](https://arxiv.org/pdf/2502.14855).
 
