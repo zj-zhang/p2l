@@ -663,6 +663,7 @@ class GeminiChatHandler(BaseChatHandler):
             messages=messages,
             temp=temp,
             top_p=top_p,
+            max_tokens=max_tokens,
             stream=True,
         )
 
