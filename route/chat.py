@@ -550,11 +550,12 @@ class GeminiChatHandler(BaseChatHandler):
         messages: List[ChatMessage],
         temp: float | None,
         top_p: float | None,
+        max_tokens: int | None,
         stream=False,
     ) -> GenerateContentResponse | Iterator[GenerateContentResponse]:
 
         generation_config = genai.GenerationConfig(
-            max_output_tokens=8192,
+            max_output_tokens=model_config.get_max_tokens(default=8192) if not max_tokens else max_tokens,
             temperature=model_config.get_temp() if not temp else temp,
             top_p=model_config.get_top_p() if not top_p else top_p,
             top_k=model_config.get_top_k(),
@@ -612,6 +613,7 @@ class GeminiChatHandler(BaseChatHandler):
             messages=messages,
             temp=temp,
             top_p=top_p,
+            max_tokens=max_tokens,
             stream=False,
         )
 
