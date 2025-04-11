@@ -1,5 +1,5 @@
 from transformers import PreTrainedTokenizer
-from datasets import Dataset, load_dataset, load_from_disk
+from datasets import Dataset, DatasetDict, load_dataset, load_from_disk
 import torch
 from typing import List
 
@@ -26,7 +26,11 @@ def get_model_list(dataset: Dataset):
 
 def get_dataset(path: str, split: str, from_disk=False):
     if from_disk:
-        dataset = load_from_disk(path)[split]
+        dataset = load_from_disk(path)
+
+        if isinstance(dataset, DatasetDict):
+        
+            dataset = dataset[split]
 
         return dataset
     else:
