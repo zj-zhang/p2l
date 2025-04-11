@@ -1,5 +1,6 @@
 apt-get update -y
 apt-get install tmux -y
+apt-get install python3-dev -y
 
 apt-get install tmux libaio-dev libopenmpi-dev python3-mpi4py -y
 
