@@ -1,16 +1,16 @@
 apt-get update -y
-apt-get install tmux -y
-apt-get install python3-dev -y
+#apt-get install tmux -y
+#apt-get install python3-dev -y
 
-apt-get install tmux libaio-dev libopenmpi-dev python3-mpi4py -y
+apt-get install libaio-dev libopenmpi-dev python3-mpi4py -y
 
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
 source $HOME/.local/bin/env
 
-uv venv .env --python 3.10
+uv venv p2l_env --python 3.10
 
-source .env/bin/activate
+source p2l_env/bin/activate
 
 uv pip install wheel packaging
 
