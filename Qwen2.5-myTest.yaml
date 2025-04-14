@@ -1,8 +1,8 @@
 proj_name: Qwen2.5-Instruct-test-run
 learning_rate: 4.0e-6
 adam_epsilon: 1.0e-8
-batch_size: 1
-max_length: 2048
+batch_size: 4
+max_length: 8192
 num_train_epochs: 1
 train_data_path: lmarena-ai/arena-human-preference-100k
 val_data_path: p2el/canonical_bt_val_data_11092024
