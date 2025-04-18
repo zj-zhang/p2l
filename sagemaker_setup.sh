@@ -3,7 +3,7 @@ apt-get update -y
 #apt-get install tmux -y
 #apt-get install python3-dev -y
 
-apt-get install libaio-dev libopenmpi-dev python3-mpi4py -y
+apt-get install libaio-dev libopenmpi-dev python3-mpi4py vim -y
 
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
@@ -20,4 +20,4 @@ source p2l_env/bin/activate
 
 uv pip install fastapi uvicorn mpi4py
 python -m ipykernel install --user --name=p2l_env --display-name "Python (p2l_env)"
-
+uv pip install -e .
